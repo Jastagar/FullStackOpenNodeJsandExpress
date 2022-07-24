@@ -1,115 +1,99 @@
 require('dotenv').config()
+
 const express = require('express')
 const app = express()
 const cors = require("cors")
 const morgan = require('morgan')
+const mongoose = require('mongoose')
+const Person = require("./DatabaseModels/person")
 
 
+function errorHandling(error, req, res, next) {
+    console.error(error.message)
+
+    if (error.name === 'CastError') {
+        return response.status(400).send({ error: 'malformatted id' })
+    }
+
+    next(error)
+}
 
 
+mongoose.connect(process.env.DATABASE_URL)
+    .then((result) => {
+        console.log("Connected to mongoose")
+    })
+    .catch((err) => {
+        console.log("Couldn't Connect to mongo Database because of :", err)
+    })
+
+app.use(express.json());
 app.use(cors())
 app.use(morgan('tiny'))
 app.use(express.static("build"))
+app.use(errorHandling)
 
-let persons = [{
-        "name": "Hitkar",
-        "number": "6283989756",
-        "id": 726858957976
-    },
-    {
-        "name": "Sukhman",
-        "number": "7889219091",
-        "id": 850184216583
-    },
-    {
-        "name": "Ishaan",
-        "number": "7015715846",
-        "id": 924852655998
-    },
-    {
-        "name": "Jaskaran",
-        "number": "9882121590",
-        "id": 299852807889
-    },
-    {
-        "name": "Shaminder Singh Brar",
-        "number": "9876100414",
-        "id": 150364105213
-    }
-]
 
-app.get('/', (request, response) => {
-    response.send('<h1>Hello World!</h1>')
+app.get("/api/persons", (req, res, next) => {
+    Person.find({}).then((result) => {
+        res.json(result)
+    }).catch((err) => next(err))
 })
-
-app.get("/api/persons", (req, res) => {
-    res.json(persons)
-})
-app.get("/info", (req, res) => {
-    const len = persons.length
+app.get("/info", (req, res, next) => {
     const timeStamp = new Date().toString()
-    res.send(`
-    <h3>Phonebook has info for ${len} persons<h3>
-    <h3>${timeStamp}</h3>
-  `)
+    Person.find({}).then((result) => {
+        console.log(result)
+        res.send(`
+            <h3>You have info of ${result.length} persons in your phoneBook</h3>
+            <h3>${timeStamp}</h3>
+        `)
+    }).catch((err) => next(err))
 })
-app.get("/api/persons/:id", (req, res) => {
+app.get("/api/persons/:id", (req, res, next) => {
     const id = req.params.id;
-    const parsedId = parseInt(id)
-    const person = persons.find((e) => {
-        return e.id === parsedId
-
-    })
-    person ? res.send(person) : res.status(404).send("No one by this Id")
+    Person.findById(id).then((foundPerson) => {
+        if (foundPerson) {
+            res.send(foundPerson)
+        } else {
+            res.status(404).end()
+        }
+    }).catch((err) => next(err))
 })
 
-app.delete("/api/persons/:id", (req, res) => {
-    const id = parseInt(req.params.id)
-    const personToDelete = persons.find((e) => {
-        return e.id === id
-    })
-    if (personToDelete) {
-        const newPersons = persons.filter((e) => {
-            return e.id !== id
-        })
-        persons = newPersons
-        res.status(200).send("Person record with id " + id + " has been removed", persons)
-    } else {
-        res.status(404).send("This Record does not exist in the PhoneBook data")
-    }
+app.delete("/api/persons/:id", (req, res, next) => {
+    const id = req.params.id;
+    Person.findByIdAndDelete(id).then((something) => {
+        if (something) {
+            res.send("deleted")
+        } else {
+            res.send("Not Found, maybe Deleted already")
+        }
+    }).catch((err) => next(err))
 
 })
-app.post("/api/persons/:name/:number", (req, res) => {
+app.post("/api/persons/:name/:number", (req, res, next) => {
     const name = req.params.name
     const number = req.params.number
-    const alreadyNumber = persons.find((e) => {
-        return e.number === number
-    })
-    const alreadyName = persons.find((e) => {
-        return e.name === name
-    })
-    console.log(name)
-    console.log(number)
-    console.log(alreadyName)
-    console.log(alreadyNumber)
-    if (alreadyName) {
-        res.status(500).send({ error: 'name must be unique' })
-    } else if (alreadyNumber) {
-        res.status(500).send({ error: 'number must be unique' })
-    } else {
-        const newId = parseInt(Math.random() * 100000000)
-        const newPerson = {
-            "id": newId,
-            "name": name,
-            "number": number
-        }
-        console.log(newPerson)
-        persons.push(newPerson)
-        console.log(persons)
-        res.status(200).send(`Added new number ${number} with name ${name}`)
-    }
+    Person.find({ name: name }, { number: number })
+        .then((foundPerson) => {
+            if (foundPerson.length) {
+                console.log(foundPerson)
+                res.send("Sorry this name or number already exists at id: ",
+                    foundPerson.id)
+            } else {
+                const newContact = new Person({
+                    name: name,
+                    number: number
+                })
+                newContact.save()
+                res.send("User Added")
+            }
+        }).catch((err) => next(err))
 })
-
+app.put("/api/persons/:id",(req,res)=>{
+    Person.findByIdAndUpdate(req.body.id,req.body,{new:true})
+    res.send("Recieved")
+})
 
 
 app.listen(process.env.PORT, () => {

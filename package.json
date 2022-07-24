@@ -7,7 +7,7 @@
         "start": "node index.js",
         "dev": "nodemon index.js",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build:ui": "rm -rf build && cd ../part2-notes/ && npm run build && cp -r build ../notes-backend",
+        "build:ui": "rmdir /s build && cd D:/Study material (Seriously)/full-stack-open-project && npm run build && copy build D:/Study material (Seriously)/FullStackOpenNodeJsandExpress",
         "deploy": "git push heroku main",
         "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && npm run deploy",
         "logs:prod": "heroku logs --tail"
@@ -16,6 +16,7 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "body-parser": "^1.20.0",
         "cors": "^2.8.5",
         "dotenv": "^16.0.1",
         "express": "^4.18.1",
