@@ -3,20 +3,28 @@ require('dotenv').config()
 const express = require('express')
 const app = express()
 const cors = require("cors")
-const morgan = require('morgan')
 const mongoose = require('mongoose')
 const Person = require("./DatabaseModels/person")
 
 
 function errorHandling(error, req, res, next) {
+    console.error("THis the the error handling midleware")
     console.error(error.message)
-
+    console.error(error.name)
     if (error.name === 'CastError') {
-        return response.status(400).send({ error: 'malformatted id' })
+        return res.status(400).send({ error: 'malformatted id' })
+    }else if (error.name === 'ValidationError') {
+        console.log("This was also triggered")
+        return res.status(400).json({ error: error.message })
     }
-
     next(error)
 }
+
+
+app.use(express.json());
+app.use(cors())
+// app.use(morgan('tiny'))
+app.use(express.static("build"))
 
 
 mongoose.connect(process.env.DATABASE_URL)
@@ -27,13 +35,10 @@ mongoose.connect(process.env.DATABASE_URL)
         console.log("Couldn't Connect to mongo Database because of :", err)
     })
 
-app.use(express.json());
-app.use(cors())
-app.use(morgan('tiny'))
-app.use(express.static("build"))
-app.use(errorHandling)
 
 
+
+// Request handling.
 app.get("/api/persons", (req, res, next) => {
     Person.find({}).then((result) => {
         res.json(result)
@@ -60,6 +65,7 @@ app.get("/api/persons/:id", (req, res, next) => {
     }).catch((err) => next(err))
 })
 
+
 app.delete("/api/persons/:id", (req, res, next) => {
     const id = req.params.id;
     Person.findByIdAndDelete(id).then((something) => {
@@ -71,9 +77,10 @@ app.delete("/api/persons/:id", (req, res, next) => {
     }).catch((err) => next(err))
 
 })
-app.post("/api/persons/:name/:number", (req, res, next) => {
-    const name = req.params.name
-    const number = req.params.number
+
+app.post("/api/persons", (req, res, next) => {
+    const name = req.body.name
+    const number = req.body.number
     Person.find({ name: name }, { number: number })
         .then((foundPerson) => {
             if (foundPerson.length) {
@@ -85,15 +92,26 @@ app.post("/api/persons/:name/:number", (req, res, next) => {
                     name: name,
                     number: number
                 })
-                newContact.save()
+                const errorV = newContact.save()
+                next(errorV)
+                
                 res.send("User Added")
             }
-        }).catch((err) => next(err))
+        }).catch((err)=>{
+            console.log("Outer Catch was also called")
+        })
 })
-app.put("/api/persons/:id",(req,res)=>{
-    Person.findByIdAndUpdate(req.body.id,req.body,{new:true})
+
+app.put("/api/persons/:id",(req,res,next)=>{
+    console.log(req.body)
+    Person.findByIdAndUpdate(req.body.id,req.body,{new:true,runValidators: true, context: 'query'}).then((result)=>{
+        console.log(result)
+    }).catch(err=>next(err))
     res.send("Recieved")
 })
+
+
+app.use(errorHandling)
 
 
 app.listen(process.env.PORT, () => {
@@ -101,7 +119,7 @@ app.listen(process.env.PORT, () => {
 })
 
 
-
+// Check the middleware, its not being called
 
 
 
