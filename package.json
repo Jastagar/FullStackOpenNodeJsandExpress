@@ -10,7 +10,8 @@
         "build:ui": "rmdir /s build && cd D:/Study material (Seriously)/full-stack-open-project && npm run build && copy build D:/Study material (Seriously)/FullStackOpenNodeJsandExpress",
         "deploy": "git push heroku main",
         "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && npm run deploy",
-        "logs:prod": "heroku logs --tail"
+        "logs:prod": "heroku logs --tail",
+        "lint": "eslint ."
     },
     "keywords": [],
     "author": "",
@@ -22,5 +23,13 @@
         "express": "^4.18.1",
         "mongoose": "^6.4.6",
         "morgan": "^1.10.0"
+    },
+    "devDependencies": {
+        "eslint": "^8.20.0",
+        "eslint-config-airbnb": "^19.0.4",
+        "eslint-plugin-import": "^2.26.0",
+        "eslint-plugin-jsx-a11y": "^6.6.1",
+        "eslint-plugin-react": "^7.30.1",
+        "eslint-plugin-react-hooks": "^4.6.0"
     }
 }
